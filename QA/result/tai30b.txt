@@ -1,0 +1,8 @@
+success = 46
+mean = 6.3976e+08
+best value = 637117113
+worst value = 651247567
+time = 292.447
+annelingStep = 5789
+beta = 10000
+trotterDim = 30

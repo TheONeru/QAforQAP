@@ -1,0 +1,3 @@
+﻿  QA.cpp
+c:\users\theo\documents\research\qa\qa\qa\common.h(34): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+  QA.vcxproj -> C:\Users\theo\Documents\research\QA\QA\Debug\QA.exe
