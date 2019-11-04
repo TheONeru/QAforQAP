@@ -1,7 +1,7 @@
 #include "QAManager.h"
 
 int main(void) {
-	QAManager q("tai50b", 8.03971e+07, 21602.8);
+	QAManager q("tai50a");
 	q.exe();
 	return 0;
 }

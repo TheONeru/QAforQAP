@@ -1,9 +1,9 @@
 #include "QAManager.h"
 
-QAManager::QAManager(string modelName, double tInit, double tEnd)
+QAManager::QAManager(string modelName)
 {
 	this->modelName = modelName;
-	p = setParameter(modelName, tInit, tEnd);
+	p = setParameter(modelName);
 	this->N = p.N;
 	int N = p.N;
 	D = new int*[N];
@@ -26,6 +26,8 @@ QAManager::~QAManager()
 void QAManager::exe() {
 	int trialNum = 100;
 	vector<int> solution(trialNum, 0);
+	SearchParameter SP(p, D, F);
+	SP.main(p, modelName);
 	clock_t start = clock();
 #pragma omp parallel for
 	for (int i = 0; i < trialNum; i++) {
@@ -34,4 +36,9 @@ void QAManager::exe() {
 	}
 	clock_t end = clock();
 	saveResult(modelName, p, solution, (end - start));
+}
+
+void QAManager::expExe() {
+	QA q(p, D, F);
+	q.expMain(modelName);
 }

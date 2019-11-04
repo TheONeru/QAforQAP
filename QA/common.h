@@ -54,7 +54,7 @@ static void saveResult(string modelName, parameters p, vector<int> output, clock
 	file.close();
 }
 
-static parameters setParameter(string modelName, double tInit, double tEnd) {
+static parameters setParameter(string modelName) {
 	parameters p;
 	if (modelName == "rou15") {
 		p.answer = 354210;
@@ -120,8 +120,11 @@ static parameters setParameter(string modelName, double tInit, double tEnd) {
 	p.mcStep = 10*p.N*p.N;//SAにおけるR(平衡状態作成のループ数)と同じに
 	p.gamma = 1;//調べられていないが，とりあえず1.0
 	p.reducePara = 0.95;//SAの減衰係数を参考に
-	p.beta = 10000;//文献を調べられていない，参考書には十分に大きくとだけ(betaは不変)
-	p.annealingStep = (int)p.trotterDim*(log(tEnd / tInit) / log(0.95));//SAと計算量を同じに
+	/*文献を調べられていない，参考書には十分に大きくとだけ(betaは不変)，
+	  最終アニーリングステップで,仮にある状態からの差のサンプリングが正規分布だと仮定した時の99.73%が横磁場の影響を受けるような設定
+	*/
+	p.beta = 10000;
+	p.annealingStep = 2000;//SAと計算量を同じに，後で計算もしくはファイルで検索
 	return p;
 }
 

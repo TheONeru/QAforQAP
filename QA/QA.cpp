@@ -51,12 +51,11 @@ QA::~QA()
 	delete[] spin, cost, F, D, permutation;
 }
 
-int QA::main() {
-	
+int QA::main() {	
 	double gamma = this->gamma;
 	double reducePara = this->reducePara;
 	int answer = this->answer;
-	initSpinConfig();
+	initSpin();
 	initBest();
 	SearchMaxDF();
 	for (int s = 0, annealingStep = this->annealingStep; s < annealingStep; s++) {
@@ -84,7 +83,7 @@ int QA::main() {
 1,-1,-1
 -1,1,-1
 */
-void QA::initSpinConfig() {
+void QA::initSpin() {
 	int ***spin = this->spin;
 
 	//spin変更候補作成
@@ -183,10 +182,11 @@ inline void QA::selectSpin(int &d, int &a, int &b, int &p, int &q) {
 	}
 }
 
+//目的関数全体の差分
 inline double QA::calcDeltaE(int d, int a, int b, int p, int q, double coefficient) {
+	int **permutation = this->permutation;
 	int **D = this->D;
 	int **F = this->F;
-	int **permutation = this->permutation;
 	delta = 0;
 	for (int i = 0, N = this->N; i < N; i++) {
 		delta += (D[i][a] - D[i][b])*(F[q][permutation[d][i]] - F[p][permutation[d][i]]);
@@ -203,7 +203,7 @@ inline double QA::calcDeltaE(int d, int a, int b, int p, int q, double coefficie
 	double delta4 = spin[d][b][q] * (spin[(d + trotterDim - 1) % trotterDim][b][q] + spin[(d + 1) % trotterDim][b][q]);
 	
 	double deltaE=0;
-
+	//tmpSougo = (delta1 + delta2 + delta3 + delta4);
 	deltaE = (double)delta / trotterDim + coefficient*(delta1 + delta2 + delta3 + delta4);
 	return deltaE;
 }
@@ -213,6 +213,7 @@ inline void QA::flipSpin(double coefficient) {
 	int d, a, b, p, q;
 	selectSpin(d, a, b, p, q);
 	double delta_E = calcDeltaE(d, a, b, p, q, coefficient);
+	tmpDoubleE = delta_E;
 	uniform_real_distribution<> r(0, 1);
 	if (delta_E <= 0) {
 		spin[d][a][p] *= -1;
@@ -242,40 +243,35 @@ inline void QA::checkMin(int d) {
 	}
 }
 
-void QA::printSpin() {
-	for (int t = 0, trotterDim = this->trotterDim; t < trotterDim; t++) {
-		cout << t << " dimention" << endl;
-		for (int l = 0, N = this->N; l < N; l++) {
-			for (int f = 0; f < N; f++) {
-				cout << spin[t][l][f] << ", ";
-			}
-			cout << endl;
-		}
-	}
-}
-
-void QA::printCost() {
-	int ***spin = this->spin;
-	vector<vector<int>> spinConfig(trotterDim, vector<int>(N, 1));
-	//データ構造変更
-	for (int t = 0, trotterDim = this->trotterDim; t < trotterDim; t++) {
-		for (int l = 0, N = this->N; l < N; l++) {
-			for (int f = 0; f < N; f++) {
-				if (spin[t][l][f] == 1) {
-					spinConfig[t][l] = f;
-					break;
-				}
+int QA::expMain(string modelName) {
+	ofstream outputFile("./exp/" + modelName + ".csv");
+	ofstream acceptFile("./exp/" + modelName + "Accept.csv");
+	//ofstream deltaFile("./exp/" + modelName + "Delta.csv");
+	//ofstream sougoFile("./exp/" + modelName + "Sougo.csv");
+	double gamma = this->gamma;
+	double reducePara = this->reducePara;
+	int answer = this->answer;
+	initSpin();
+	initBest();
+	SearchMaxDF();
+	for (int s = 0, annealingStep = this->annealingStep; s < annealingStep; s++) {
+		double coefficient = (1 / beta)*log(tanh(beta*gamma / trotterDim));
+		cout << s << "annealler step" << endl;
+		for (int m = 0, mcStep = this->mcStep; m < mcStep; m++) {
+			flipSpin(coefficient);
+			if (m % 2500==0) {
+				outputFile << s * mcStep + m << "," << cost[0] << endl;
+				acceptFile << s * mcStep + m << "," << tmpDoubleE <<endl;
+				//deltaFile << s * mcStep + m << "," << delta << endl;
+				//sougoFile << s * mcStep + m << "," << tmpSougo << endl;
 			}
 		}
+		gamma *= reducePara;
 	}
-
-	for (int t = 0, trotterDim = this->trotterDim; t < trotterDim; t++) {
-		long cost = 0;
-		for (int l1 = 0, N = this->N; l1 < N; l1++) {
-			for (int l2 = 0; l2 < N; l2++) {
-				cost += (long)D[l1][l2] * F[spinConfig[t][l1]][spinConfig[t][l2]];
-			}
-		}
-		cout << cost << endl;
+	for (int i = 0, N = this->N; i < N; i++) {
+		cout << bestPermutation[i] << " ";
 	}
+	cout << endl;
+	cout << bestCost << endl;
+	return bestCost;
 }

@@ -1,0 +1,19 @@
+﻿  SearchParameter.cpp
+c1xx : warning C4199: 2 フェーズの名前参照は、C++/CLI、C++/CX、OpenMP ではサポートされていません。/Zc:twoPhase- を使用します
+c:\users\theo\documents\research\qa\qaforqap\qaforqap\qa\sa.h(19): warning C4267: '引数': 'size_t' から '_Ty' に変換しました。データが失われているかもしれません。
+          with
+          [
+              _Ty=int
+          ]
+c:\users\theo\documents\research\qa\qaforqap\qaforqap\qa\searchparameter.cpp(44): warning C4244: 'return': 'double' から 'int' への変換です。データが失われる可能性があります。
+c:\users\theo\documents\research\qa\qaforqap\qaforqap\qa\searchparameter.cpp(55): warning C4244: '=': 'double' から 'int' への変換です。データが失われる可能性があります。
+c:\users\theo\documents\research\qa\qaforqap\qaforqap\qa\searchparameter.cpp(56): warning C4244: '=': 'double' から 'int' への変換です。データが失われる可能性があります。
+c:\users\theo\documents\research\qa\qaforqap\qaforqap\qa\searchparameter.cpp(95): warning C4244: 'return': 'double' から 'int' への変換です。データが失われる可能性があります。
+c:\users\theo\documents\research\qa\qaforqap\qaforqap\qa\searchparameter.cpp(111): warning C4267: '初期化中': 'size_t' から 'int' に変換しました。データが失われているかもしれません。
+c:\users\theo\documents\research\qa\qaforqap\qaforqap\qa\searchparameter.cpp(132): warning C4244: 'return': 'double' から 'int' への変換です。データが失われる可能性があります。
+  コード生成しています。
+  1 of 442 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  QA.vcxproj -> C:\Users\theo\Documents\research\QA\QAforQAP\QAforQAP\x64\Release\QA.exe
