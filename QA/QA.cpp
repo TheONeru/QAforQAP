@@ -8,11 +8,13 @@ QA::QA(parameters p, int **D, int **F)
 	gamma = p.gamma;
 	annealingStep = p.annealingStep;
 	mcStep = p.mcStep;
-	reducePara = p.reducePara;
+	reduceGamma = p.reduceGamma;
 	beta = p.beta;
 	answer = p.answer;
+	initT = p.initT;
+	reduceT = p.reduceT;
 	//spin array allocate memory
-	spin = new int**[N];
+	spin = new int**[trotterDim];
 	permutation = new int*[trotterDim];
 	for (int t = 0, trotterDim = this->trotterDim; t < trotterDim; t++) {
 		spin[t] = new int*[N];
@@ -53,9 +55,10 @@ QA::~QA()
 
 int QA::main() {	
 	double gamma = this->gamma;
-	double reducePara = this->reducePara;
+	double reduceGamma = this->reduceGamma;
 	int answer = this->answer;
-	initSpin();
+	initPermutation();
+	getSpinConfig();
 	initBest();
 	SearchMaxDF();
 	for (int s = 0, annealingStep = this->annealingStep; s < annealingStep; s++) {
@@ -63,7 +66,7 @@ int QA::main() {
 		for (int m = 0, mcStep = this->mcStep; m < mcStep; m++) {
 			flipSpin(coefficient);
 		}
-		gamma *= reducePara;
+		gamma *= reduceGamma;
 		if (bestCost <= answer) {
 			break;
 		}
@@ -76,44 +79,89 @@ int QA::main() {
 	return bestCost;
 }
 
-//初期スピン配置の決定, 配列の次元は[Trotter, location(vertical), factory(horizon)]
+int QA::SAQA() {
+	double gamma = this->gamma;
+	double reduceGamma = this->reduceGamma;
+	int answer = this->answer;
+	double beta = this->beta;
+	double reduceT = this->reduceT;
+	//前処理
+	initPermutation();
+	initBest();
+	SearchMaxDF();
+	double invT = 1/initT;
+	//SAによる探索
+	for (double t=initT; invT < beta; t*=reduceT) {
+		for (int m = 0, mcStep = this->mcStep; m < mcStep; m++) {
+			sa(invT);
+		}
+		if (bestCost <= answer) {
+			for (int i = 0, N = this->N; i < N; i++) {
+				cout << bestPermutation[i] << " ";
+			}
+			cout << endl;
+			cout << bestCost << endl;
+			return bestCost;
+		}
+		invT = 1 / (t*reduceT);
+	}
+
+	//gamma *= pow(reduceGamma, cnt);
+	//QAによる探索
+	getSpinConfig();
+	for (int s = 0, annealingStep = this->annealingStep; s < annealingStep; s++) {
+		double coefficient = (1 / beta)*log(tanh(beta*gamma / trotterDim));
+		for (int m = 0, mcStep = this->mcStep; m < mcStep; m++) {
+			flipSpin(coefficient);
+		}
+		gamma *= reduceGamma;
+		if (bestCost <= answer) {
+			break;
+		}
+	}
+	for (int i = 0, N = this->N; i < N; i++) {
+		cout << bestPermutation[i] << " ";
+	}
+	cout << endl;
+	cout << bestCost << endl;
+	return bestCost;
+}
+
+void QA::initPermutation() {
+	int **permutation = this->permutation;
+	for (int t = 0; t < trotterDim; t++) {
+		vector<int> randomPermutation(N);
+		for (int j = 0; j < N; j++) {
+			randomPermutation[j] = j;
+		}
+		for (int j = 0; j < N; j++) {
+			uniform_int_distribution<> initRand(0, randomPermutation.size() - 1);
+			int r = initRand(mt);
+			permutation[t][j] = randomPermutation[r];
+			randomPermutation.erase(randomPermutation.begin() + r);
+		}
+	}
+
+}
+
+//スピン配置の決定, 配列の次元は[Trotter, location(vertical), factory(horizon)]
 /*-
 下の例のように一つだけ1に残りは-1にする(1,-1にすることで反転を容易にしている)
 -1,-1,1
 1,-1,-1
 -1,1,-1
 */
-void QA::initSpin() {
+void QA::getSpinConfig() {
+	int **permutation = this->permutation;
 	int ***spin = this->spin;
-
-	//spin変更候補作成
-	vector<int> spinCandidate(N);
-	iota(spinCandidate.begin(), spinCandidate.end(), 0);
-
-	//初期スピン配置作成
 	for (int t = 0, trotterDim = this->trotterDim; t < trotterDim; t++) {
-		shuffle(spinCandidate.begin(), spinCandidate.end(), mt);
 		for (int l = 0, N = this->N; l < N; l++) {
 			for (int f = 0; f < N; f++) {
 				spin[t][l][f] = -1;
 			}
-			int s_ = spinCandidate[l];
-			spin[t][l][s_] = 1;
+			spin[t][l][permutation[t][l]] = 1;
 		}
 	}
-
-	//データ構造変更，計算上順列の方が計算しやすいため順列に変更
-	for (int t = 0, trotterDim = this->trotterDim; t < trotterDim; t++) {
-		for (int l = 0, N = this->N; l < N; l++) {
-			for (int f = 0; f < N; f++) {
-				if (spin[t][l][f] == 1) {
-					permutation[t][l] = f;
-					break;
-				}
-			}
-		}
-	}	
-
 }
 
 void QA::initBest() {
@@ -161,12 +209,8 @@ inline void QA::selectSpin(int &d, int &a, int &b, int &p, int &q) {
 	int ***spin = this->spin;
 	uniform_int_distribution<> random_dim(0, trotterDim - 1);
 	d = random_dim(mt);
-	uniform_int_distribution<> random_location(0, N-1);
-	a = random_location(mt);
-	b = random_location(mt);
-	while (a == b) {
-		b = random_location(mt);
-	}
+	selectPositon(a, b);
+	
 	//二分木探索にしたらもっと早くなりそうだけど，問題サイズが比較的小さいからあまり変わらなさそうでもある
 	for (int f = 0, N = this->N; f < N; f++) {
 		if (spin[d][a][f] == 1) {
@@ -182,6 +226,14 @@ inline void QA::selectSpin(int &d, int &a, int &b, int &p, int &q) {
 	}
 }
 
+inline void QA::selectPositon(int &a, int &b) {
+	uniform_int_distribution<> random_location(0, N - 1);
+	a = random_location(mt);
+	b = random_location(mt);
+	while (a == b) {
+		b = random_location(mt);
+	}
+}
 //目的関数全体の差分
 inline double QA::calcDeltaE(int d, int a, int b, int p, int q, double coefficient) {
 	int **permutation = this->permutation;
@@ -208,6 +260,7 @@ inline double QA::calcDeltaE(int d, int a, int b, int p, int q, double coefficie
 	return deltaE;
 }
 
+//separationParaはSAの時にはトロッタDimで割っている分のmの影響を無くしたいためmをかけているだけ
 inline void QA::flipSpin(double coefficient) {
 	int ***spin = this->spin;
 	int d, a, b, p, q;
@@ -236,6 +289,38 @@ inline void QA::flipSpin(double coefficient) {
 	checkMin(d);
 }
 
+inline void QA::sa(double invT) {
+	int ***spin = this->spin;
+	int **D = this->D;
+	int **F = this->F;
+
+	for (int d = 0; d < N; d++) {
+		int a, b;
+		selectPositon(a, b);
+		delta = 0;
+		for (int i = 0, N = this->N; i < N; i++) {
+			delta += (D[i][a] - D[i][b])*(F[permutation[d][b]][permutation[d][i]] - F[permutation[d][a]][permutation[d][i]]);
+			delta += (D[a][i] - D[b][i])*(F[permutation[d][i]][permutation[d][b]] - F[permutation[d][i]][permutation[d][a]]);
+		}
+		delta += (D[a][b] + D[b][a] - D[a][a] - D[b][b])*(F[permutation[d][a]][permutation[d][b]] 
+			+ F[permutation[d][b]][permutation[d][a]] - F[permutation[d][a]][permutation[d][a]] - F[permutation[d][b]][permutation[d][b]]);
+		uniform_real_distribution<> r(0, 1);
+		if (delta <= 0) {
+			int p_ = permutation[d][a];
+			permutation[d][a] = permutation[d][b];
+			permutation[d][b] = p_;
+			cost[d] += delta;
+		}
+		else if (r(mt) < exp(-1 * invT * delta)) {
+			int p_ = permutation[d][a];
+			permutation[d][a] = permutation[d][b];
+			permutation[d][b] = p_;
+			cost[d] += delta;
+		}
+		checkMin(d);
+	}
+}
+
 inline void QA::checkMin(int d) {
 	if (bestCost > cost[d]) {
 		bestCost = cost[d];
@@ -246,12 +331,11 @@ inline void QA::checkMin(int d) {
 int QA::expMain(string modelName) {
 	ofstream outputFile("./exp/" + modelName + ".csv");
 	ofstream acceptFile("./exp/" + modelName + "Accept.csv");
-	//ofstream deltaFile("./exp/" + modelName + "Delta.csv");
-	//ofstream sougoFile("./exp/" + modelName + "Sougo.csv");
 	double gamma = this->gamma;
-	double reducePara = this->reducePara;
+	double reduceGamma = this->reduceGamma;
 	int answer = this->answer;
-	initSpin();
+	initPermutation();
+	getSpinConfig();
 	initBest();
 	SearchMaxDF();
 	for (int s = 0, annealingStep = this->annealingStep; s < annealingStep; s++) {
@@ -262,11 +346,9 @@ int QA::expMain(string modelName) {
 			if (m % 2500==0) {
 				outputFile << s * mcStep + m << "," << cost[0] << endl;
 				acceptFile << s * mcStep + m << "," << tmpDoubleE <<endl;
-				//deltaFile << s * mcStep + m << "," << delta << endl;
-				//sougoFile << s * mcStep + m << "," << tmpSougo << endl;
 			}
 		}
-		gamma *= reducePara;
+		gamma *= reduceGamma;
 	}
 	for (int i = 0, N = this->N; i < N; i++) {
 		cout << bestPermutation[i] << " ";

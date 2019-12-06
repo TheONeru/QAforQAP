@@ -5,7 +5,7 @@ SearchParameter::SearchParameter(parameters p, int **D, int **F)
 	mt.seed(rnd());
 	N = p.N;
 	R = p.mcStep;
-	alpha = p.reducePara;
+	alpha = p.reduceGamma;
 	this->D = new int*[N];
 	this->F = new int*[N];
 	for (int i = 0; i < N; i++) {
@@ -28,6 +28,7 @@ SearchParameter::~SearchParameter()
 
 void SearchParameter::main(parameters &p, string modelName) {
 	p.annealingStep = searchAnnealingStep(modelName);
+	p.initT = tInit;
 	cout << "初期温度 = " << tInit << endl;
 	cout << "終了温度 = " << tEnd << endl;
 	cout << "アニーリングステップ = " << p.annealingStep << endl;
@@ -116,10 +117,10 @@ int SearchParameter::searchBeta(parameters p) {
 	double dev = sqrt(sum2 / sample.size());
 	cout << "mean=" << mean <<endl;
 	double magnification = -1*N*((double)2/250) + (double)29/10;
-	double target = mean + 2.4 * dev;
+	double target = mean + magnification * dev;
 	cout << "目標値 = " << target << endl;
 	double betaAns = LONG_MAX;
-	double tmpA = pow(p.reducePara, p.annealingStep) / p.trotterDim;
+	double tmpA = pow(p.reduceGamma, p.annealingStep) / p.trotterDim;
 	for (double b = LONG_MAX; b > 1; b /= 2) {
 		double c = (1 / betaAns)*log(tanh(betaAns*tmpA));
 		if (-4 * c < target) {

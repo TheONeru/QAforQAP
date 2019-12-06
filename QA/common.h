@@ -7,6 +7,7 @@
 #include <omp.h>
 #include <float.h>
 #include <map>
+#include <math.h>
 #include<algorithm>
 #include<numeric>
 using namespace std;
@@ -17,8 +18,10 @@ typedef struct {
 	double gamma;
 	int annealingStep;
 	int mcStep;
-	double reducePara;
+	double reduceGamma;
 	double beta;
+	double initT;
+	double reduceT;
 	int answer;
 } parameters;
 
@@ -116,15 +119,16 @@ static parameters setParameter(string modelName) {
 		p.answer = 13499184;
 		p.N = 80;
 	}
+	p.reduceT = 0.95;
 	p.trotterDim = p.N;//調べられていないが，十分大きければOK，今回はSAに合わせるために
 	p.mcStep = 10*p.N*p.N;//SAにおけるR(平衡状態作成のループ数)と同じに
 	p.gamma = 1;//調べられていないが，とりあえず1.0
-	p.reducePara = 0.95;//SAの減衰係数を参考に
+	p.reduceGamma = 0.95;//SAの減衰係数を参考に
 	/*文献を調べられていない，参考書には十分に大きくとだけ(betaは不変)，
 	  最終アニーリングステップで,仮にある状態からの差のサンプリングが正規分布だと仮定した時の99.73%が横磁場の影響を受けるような設定
 	*/
 	p.beta = 10000;
-	p.annealingStep = 2000;//SAと計算量を同じに，後で計算もしくはファイルで検索
+	p.annealingStep = 4000;//SAと計算量を同じに，後で計算もしくはファイルで検索
 	return p;
 }
 

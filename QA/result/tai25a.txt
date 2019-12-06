@@ -1,8 +1,8 @@
-success = 45
-mean = 1.16977e+06
+success = 44
+mean = 1.16972e+06
 best value = 1167256
-worst value = 1176590
-time = 40.64
+worst value = 1177386
+time = 208.506
 annelingStep = 1961
 beta = 89
 trotterDim = 25

@@ -32,7 +32,7 @@ void QAManager::exe() {
 #pragma omp parallel for
 	for (int i = 0; i < trialNum; i++) {
 		QA q(p, D, F);
-		solution[i] = q.main();
+		solution[i] = q.SAQA();
 	}
 	clock_t end = clock();
 	saveResult(modelName, p, solution, (end - start));
